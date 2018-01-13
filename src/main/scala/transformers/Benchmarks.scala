@@ -7,106 +7,202 @@ import cats.data.{ State => CatsState }
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
 class Benchmarks {
-  @Benchmark
-  def leftAssociatedBindOptimized(): Int = {
+  def leftAssociatedBindOptimized(bound: Int): Int = {
     def loop(i: Int): FreeState[Int, Int] =
-      if (i > 10000) FreeState.pure(i)
+      if (i > bound) FreeState.pure(i)
       else FreeState.pure(i + 1).flatMap(loop)
 
     Interpreter.runOptimized(0)(FreeState.pure(0).flatMap(loop))._1
   }
 
-  @Benchmark
-  def leftAssociatedBindIdiomatic(): Int = {
+  def leftAssociatedBindIdiomatic(bound: Int): Int = {
     def loop(i: Int): FreeState[Int, Int] =
-      if (i > 10000) FreeState.pure(i)
+      if (i > bound) FreeState.pure(i)
       else FreeState.pure(i + 1).flatMap(loop)
 
     Interpreter.runIdiomatic(0)(FreeState.pure(0).flatMap(loop))._1
   }
 
-  @Benchmark
-  def leftAssociatedBindPlain(): Int = {
+  def leftAssociatedBindPlain(bound: Int): Int = {
     def loop(i: Int): State[Int, Int] =
-      if (i > 1000) State.pure(i)
+      if (i > bound) State.pure(i)
       else State.pure(i + 1).flatMap(loop)
 
     State.pure(0).flatMap(loop).run(0)._1
   }
 
-  @Benchmark
-  def leftAssociatedBindCats(): Int = {
+  def leftAssociatedBindCats(bound: Int): Int = {
     def loop(i: Int): CatsState[Int, Int] =
-      if (i > 1000) CatsState.pure(i)
+      if (i > bound) CatsState.pure(i)
       else CatsState.pure(i + 1).flatMap(loop)
 
     CatsState.pure(0).flatMap(loop).run(0).value._1
   }
 
-  @Benchmark
-  def getSetOptimized(): Int = {
+  def getSetOptimized(bound: Int): Int = {
     def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
-      if (i > 1000) acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get)
+      if (i > bound) acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get)
       else loop(i + 1, acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get))
 
     Interpreter.runOptimized(0)(loop(0, FreeState.pure(0)))._1
   }
 
-  @Benchmark
-  def getSetIdiomatic(): Int = {
+  def getSetIdiomatic(bound: Int): Int = {
     def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
-      if (i > 1000) acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get)
+      if (i > bound) acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get)
       else loop(i + 1, acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get))
 
     Interpreter.runIdiomatic(0)(loop(0, FreeState.pure(0)))._1
   }
 
-  @Benchmark
-  def getSetPlain(): Int = {
+  def getSetPlain(bound: Int): Int = {
     def loop(i: Int, acc: State[Int, Int]): State[Int, Int] =
-      if (i > 1000) acc.flatMap(_ => State.set(i)).flatMap(_ => State.get)
+      if (i > bound) acc.flatMap(_ => State.set(i)).flatMap(_ => State.get)
       else loop(i + 1, acc.flatMap(_ => State.set(i)).flatMap(_ => State.get))
 
     loop(0, State.pure(0)).run(0)._1
   }
 
-  @Benchmark
-  def getSetCats(): Int = {
+  def getSetCats(bound: Int): Int = {
     def loop(i: Int, acc: CatsState[Int, Int]): CatsState[Int, Int] =
-      if (i > 1000) acc.flatMap(_ => CatsState.set(i)).flatMap(_ => CatsState.get)
+      if (i > bound) acc.flatMap(_ => CatsState.set(i)).flatMap(_ => CatsState.get)
       else loop(i + 1, acc.flatMap(_ => CatsState.set(i)).flatMap(_ => CatsState.get))
 
     loop(0, CatsState.pure(0)).run(0).value._1
   }
 
-  @Benchmark
-  def effectfulTraversalIdiomatic(): Int =
+  def effectfulTraversalIdiomatic(bound: Int): Int =
     Interpreter.runIdiomatic(0) {
-      FreeState.traverse((0 to 1000).toList) { el =>
+      FreeState.traverse((0 to bound).toList) { el =>
         FreeState.get[Int].flatMap(s => FreeState.set(s + el))
       }
     }._1
 
-  @Benchmark
-  def effectfulTraversalOptimized(): Int =
+  def effectfulTraversalOptimized(bound: Int): Int =
     Interpreter.runOptimized(0) {
-      FreeState.traverse((0 to 1000).toList) { el =>
+      FreeState.traverse((0 to bound).toList) { el =>
         FreeState.get[Int].flatMap(s => FreeState.set(s + el))
       }
     }._1
 
-  @Benchmark
-  def effectfulTraversalPlain(): Int =
-    State.traverse((0 to 1000).toList) { el =>
+  def effectfulTraversalPlain(bound: Int): Int =
+    State.traverse((0 to bound).toList) { el =>
       State.get[Int].flatMap(s => State.set(s + el))
     }.run(0)._1
 
-  @Benchmark
-  def effectfulTraversalCats(): Int = {
+  def effectfulTraversalCats(bound: Int): Int = {
     import cats.implicits._
 
-    (0 to 1000).toList.traverse { el =>
+    (0 to bound).toList.traverse { el =>
       CatsState.get[Int].flatMap(s => CatsState.set(s + el))
     }.run(0).value._1
   }
+
+  @Benchmark
+  def effectfulTraversalIdiomatic1k(): Int = effectfulTraversalIdiomatic(1000)
+  @Benchmark
+  def effectfulTraversalIdiomatic10k(): Int = effectfulTraversalIdiomatic(10000)
+  @Benchmark
+  def effectfulTraversalIdiomatic100k(): Int = effectfulTraversalIdiomatic(100000)
+  @Benchmark
+  def effectfulTraversalIdiomatic1mil(): Int = effectfulTraversalIdiomatic(1000000)
+
+  @Benchmark
+  def getSetIdiomatic1k(): Int = getSetIdiomatic(1000)
+  @Benchmark
+  def getSetIdiomatic10k(): Int = getSetIdiomatic(10000)
+  @Benchmark
+  def getSetIdiomatic100k(): Int = getSetIdiomatic(100000)
+  @Benchmark
+  def getSetIdiomatic1mil(): Int = getSetIdiomatic(1000000)
+  
+  @Benchmark
+  def leftAssociatedBindIdiomatic1k(): Int = leftAssociatedBindIdiomatic(1000)
+  @Benchmark
+  def leftAssociatedBindIdiomatic10k(): Int = leftAssociatedBindIdiomatic(10000)
+  @Benchmark
+  def leftAssociatedBindIdiomatic100k(): Int = leftAssociatedBindIdiomatic(100000)
+  @Benchmark
+  def leftAssociatedBindIdiomatic1mil(): Int = leftAssociatedBindIdiomatic(1000000)
+
+  @Benchmark
+  def effectfulTraversalOptimized1k(): Int = effectfulTraversalOptimized(1000)
+  @Benchmark
+  def effectfulTraversalOptimized10k(): Int = effectfulTraversalOptimized(10000)
+  @Benchmark
+  def effectfulTraversalOptimized100k(): Int = effectfulTraversalOptimized(100000)
+  @Benchmark
+  def effectfulTraversalOptimized1mil(): Int = effectfulTraversalOptimized(1000000)
+
+  @Benchmark
+  def getSetOptimized1k(): Int = getSetOptimized(1000)
+  @Benchmark
+  def getSetOptimized10k(): Int = getSetOptimized(10000)
+  @Benchmark
+  def getSetOptimized100k(): Int = getSetOptimized(100000)
+  @Benchmark
+  def getSetOptimized1mil(): Int = getSetOptimized(1000000)
+  
+  @Benchmark
+  def leftAssociatedBindOptimized1k(): Int = leftAssociatedBindOptimized(1000)
+  @Benchmark
+  def leftAssociatedBindOptimized10k(): Int = leftAssociatedBindOptimized(10000)
+  @Benchmark
+  def leftAssociatedBindOptimized100k(): Int = leftAssociatedBindOptimized(100000)
+  @Benchmark
+  def leftAssociatedBindOptimized1mil(): Int = leftAssociatedBindOptimized(1000000)
+
+  @Benchmark
+  def effectfulTraversalPlain1k(): Int = effectfulTraversalPlain(1000)
+  @Benchmark
+  def effectfulTraversalPlain10k(): Int = effectfulTraversalPlain(10000)
+  @Benchmark
+  def effectfulTraversalPlain100k(): Int = effectfulTraversalPlain(100000)
+  @Benchmark
+  def effectfulTraversalPlain1mil(): Int = effectfulTraversalPlain(1000000)
+
+  @Benchmark
+  def getSetPlain1k(): Int = getSetPlain(1000)
+  @Benchmark
+  def getSetPlain10k(): Int = getSetPlain(10000)
+  @Benchmark
+  def getSetPlain100k(): Int = getSetPlain(100000)
+  @Benchmark
+  def getSetPlain1mil(): Int = getSetPlain(1000000)
+  
+  @Benchmark
+  def leftAssociatedBindPlain1k(): Int = leftAssociatedBindPlain(1000)
+  @Benchmark
+  def leftAssociatedBindPlain10k(): Int = leftAssociatedBindPlain(10000)
+  @Benchmark
+  def leftAssociatedBindPlain100k(): Int = leftAssociatedBindPlain(100000)
+  @Benchmark
+  def leftAssociatedBindPlain1mil(): Int = leftAssociatedBindPlain(1000000)
+
+  @Benchmark
+  def effectfulTraversalCats1k(): Int = effectfulTraversalCats(1000)
+  @Benchmark
+  def effectfulTraversalCats10k(): Int = effectfulTraversalCats(10000)
+  @Benchmark
+  def effectfulTraversalCats100k(): Int = effectfulTraversalCats(100000)
+  @Benchmark
+  def effectfulTraversalCats1mil(): Int = effectfulTraversalCats(1000000)
+
+  @Benchmark
+  def getSetCats1k(): Int = getSetCats(1000)
+  @Benchmark
+  def getSetCats10k(): Int = getSetCats(10000)
+  @Benchmark
+  def getSetCats100k(): Int = getSetCats(100000)
+  @Benchmark
+  def getSetCats1mil(): Int = getSetCats(1000000)
+  
+  @Benchmark
+  def leftAssociatedBindCats1k(): Int = leftAssociatedBindCats(1000)
+  @Benchmark
+  def leftAssociatedBindCats10k(): Int = leftAssociatedBindCats(10000)
+  @Benchmark
+  def leftAssociatedBindCats100k(): Int = leftAssociatedBindCats(100000)
+  @Benchmark
+  def leftAssociatedBindCats1mil(): Int = leftAssociatedBindCats(1000000)
 }

@@ -27,21 +27,51 @@ To run the benchmarks, use this SBT task:
 sbt jmh:run -i 10 -wi 10 -f1 -t1
 ```
 
-These are the benchmark results from running on my machine:
+The benchmarks run each benchmark with 1k, 10k, 100k and 1mil elements against each implementation. Some benchmarks are missing due to stack safety issues.
+
+These are the results from running on my machin:
 ```
-Benchmark                                             Mode  Cnt      Score      Error  Units
-transformers.Benchmarks.effectfulTraversalIdiomatic  thrpt   10  13299.553 ?  540.366  ops/s
-transformers.Benchmarks.effectfulTraversalOptimized  thrpt   10   9744.708 ?  692.701  ops/s
-transformers.Benchmarks.effectfulTraversalPlain      thrpt   10  10166.210 ?  167.704  ops/s
-transformers.Benchmarks.effectfulTraversalCats       thrpt   10   1559.300 ?   47.680  ops/s
-transformers.Benchmarks.getSetIdiomatic              thrpt   10  27915.648 ?  368.691  ops/s
-transformers.Benchmarks.getSetOptimized              thrpt   10  23789.783 ? 1281.337  ops/s
-transformers.Benchmarks.getSetPlain                  thrpt   10  24104.836 ?  496.736  ops/s
-transformers.Benchmarks.getSetCats                   thrpt   10   3808.412 ?   58.164  ops/s
-transformers.Benchmarks.leftAssociatedBindIdiomatic  thrpt   10  12938.660 ?  224.829  ops/s
-transformers.Benchmarks.leftAssociatedBindOptimized  thrpt   10  13214.841 ?  280.577  ops/s
-transformers.Benchmarks.leftAssociatedBindPlain      thrpt   10  63531.226 ?  866.285  ops/s
-transformers.Benchmarks.leftAssociatedBindCats       thrpt   10  11761.478 ?  262.621  ops/s
+Benchmark                                   Mode   Cnt     Score     Error  Units
+Benchmarks.effectfulTraversalIdiomatic1k    thrpt   10  13604.397 ?  257.137  ops/s
+Benchmarks.effectfulTraversalOptimized1k    thrpt   10  10510.265 ?  242.085  ops/s
+Benchmarks.effectfulTraversalPlain1k        thrpt   10  10919.611 ?  632.883  ops/s
+Benchmarks.effectfulTraversalCats1k         thrpt   10   1637.210 ?   39.364  ops/s
+
+Benchmarks.effectfulTraversalOptimized10k   thrpt   10   780.790 ?  16.632  ops/s
+Benchmarks.effectfulTraversalCats10k        thrpt   10   118.983 ?   1.942  ops/s
+
+Benchmarks.effectfulTraversalOptimized100k  thrpt   10    84.006 ?   3.444  ops/s
+Benchmarks.effectfulTraversalCats100k       thrpt   10     9.270 ?   0.747  ops/s
+
+Benchmarks.effectfulTraversalOptimized1mil  thrpt   10     7.443 ?   0.879  ops/s
+Benchmarks.effectfulTraversalCats1mil       thrpt   10     0.256 ?   0.091  ops/s
+
+Benchmarks.getSetIdiomatic1k                thrpt   10  29697.034 ?  758.154  ops/s
+Benchmarks.getSetOptimized1k                thrpt   10  24496.856 ?  674.744  ops/s
+Benchmarks.getSetPlain1k                    thrpt   10  24262.003 ?  574.330  ops/s
+Benchmarks.getSetCats1k                     thrpt   10   4078.638 ?   83.634  ops/s
+
+// Note that everything apart from optimized crashed on stack safety...
+Benchmarks.getSetOptimized10k               thrpt   10  2376.048 ?  61.998  ops/s
+Benchmarks.getSetOptimized100k              thrpt   10   230.924 ?   6.935  ops/s
+Benchmarks.getSetOptimized1mil              thrpt   10    17.981 ?   5.222  ops/s
+
+Benchmarks.leftAssociatedBindIdiomatic1k    thrpt   10  86726.408 ? 2028.591  ops/s
+Benchmarks.leftAssociatedBindOptimized1k    thrpt   10  99862.966 ? 1662.192  ops/s
+Benchmarks.leftAssociatedBindPlain1k        thrpt   10  53196.438 ? 1132.752  ops/s
+Benchmarks.leftAssociatedBindCats1k         thrpt   10  11630.047 ?  264.939  ops/s
+
+Benchmarks.leftAssociatedBindIdiomatic10k   thrpt   10  9743.492 ? 119.160  ops/s
+Benchmarks.leftAssociatedBindOptimized10k   thrpt   10  8276.080 ? 202.169  ops/s
+Benchmarks.leftAssociatedBindCats10k        thrpt   10  1145.639 ?  17.292  ops/s
+
+Benchmarks.leftAssociatedBindIdiomatic100k  thrpt   10   970.573 ?   9.293  ops/s
+Benchmarks.leftAssociatedBindOptimized100k  thrpt   10   848.888 ?  10.699  ops/s
+Benchmarks.leftAssociatedBindCats100k       thrpt   10   112.690 ?   1.472  ops/s
+
+Benchmarks.leftAssociatedBindIdiomatic1mil  thrpt   10    95.518 ?   4.284  ops/s
+Benchmarks.leftAssociatedBindOptimized1mil  thrpt   10    84.350 ?   2.080  ops/s
+Benchmarks.leftAssociatedBindCats1mil       thrpt   10    11.455 ?   0.352  ops/s
 ```
 
 ### Thoughts:
