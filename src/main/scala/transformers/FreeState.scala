@@ -124,19 +124,53 @@ object Interpreter {
     (state, res.asInstanceOf[A])
   }
 
-  def runIdiomatic[S, A](s: S)(fa: FreeState[S, A]): (S, A) = fa match {
-    case FreeState.Pure(a) =>
-      (s, a)
+  // GADT shenanigans. This should be at some point the stack safe version.
+  // def runIdiomatic[S, A](s0: S)(fa0: FreeState[S, A]): (S, A) = {
+  //   @annotation.tailrec
+  //   def go(s: S, fa: FreeState[S, A]): (S, A) =
+  //     fa match {
+  //       case FreeState.Pure(a) =>
+  //         (s, a)
 
-    case flatmap: FreeState.FlatMap[S, x, A] =>
-      val (s2, x) = runIdiomatic(s)(flatmap.fa)
+  //       case FreeState.FlatMap(fa, f) =>
+  //         fa match {
+  //           case FreeState.Pure(a) =>
+  //             go(s, f(a))
 
-      runIdiomatic(s2)(flatmap.f(x))
+  //           case FreeState.Get() =>
+  //             go(s, f(s))
 
-    case FreeState.Get() =>
-      (s, s.asInstanceOf[A])
+  //           case x: FreeState.Set[S] =>
+  //             go(x.s, f(()))
 
-    case FreeState.Set(s) =>
-      (s, ().asInstanceOf[A])
-  }
+  //           case FreeState.FlatMap(faInner, ff) =>
+  //             go(s, faInner.flatMap(x => ff(x).flatMap(f)))
+  //         }
+
+  //       case FreeState.Get() =>
+  //         (s, s.asInstanceOf[A])
+
+  //       case FreeState.Set(s) =>
+  //         (s, ().asInstanceOf[A])
+  //     }
+
+  //   go(s0, fa0)
+  // }
+
+  def runIdiomatic[S, A](s: S)(fa: FreeState[S, A]): (S, A) =
+    fa match {
+      case FreeState.Pure(a) =>
+        (s, a)
+
+      case flatmap: FreeState.FlatMap[S, x, A] =>
+        val (s2, x) = runIdiomatic(s)(flatmap.fa)
+
+        runIdiomatic(s2)(flatmap.f(x))
+
+      case FreeState.Get() =>
+        (s, s.asInstanceOf[A])
+
+      case FreeState.Set(s) =>
+        (s, ().asInstanceOf[A])
+    }
 }
