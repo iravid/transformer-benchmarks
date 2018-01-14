@@ -3,6 +3,7 @@ package transformers
 import java.util.concurrent.TimeUnit
 import org.openjdk.jmh.annotations._
 import cats.data.{ State => CatsState }
+import scalaz.{ State => ScalazState }
 
 @BenchmarkMode(Array(Mode.Throughput))
 @OutputTimeUnit(TimeUnit.SECONDS)
@@ -39,6 +40,14 @@ class Benchmarks {
     CatsState.pure(0).flatMap(loop).run(0).value._1
   }
 
+  def leftAssociatedBindScalaz(bound: Int): Int = {
+    def loop(i: Int): ScalazState[Int, Int] =
+      if (i > bound) ScalazState.state(i)
+      else ScalazState.state(i + 1).flatMap(loop)
+
+    ScalazState.state(0).flatMap(loop).runRec(0)._1
+  }
+
   def getSetOptimized(bound: Int): Int = {
     def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
       if (i > bound) acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get)
@@ -71,6 +80,14 @@ class Benchmarks {
     loop(0, CatsState.pure(0)).run(0).value._1
   }
 
+  def getSetScalaz(bound: Int): Int = {
+    def loop(i: Int, acc: ScalazState[Int, Int]): ScalazState[Int, Int] =
+      if (i > bound) acc.flatMap(_ => ScalazState.put(i)).flatMap(_ => ScalazState.get)
+      else loop(i + 1, acc.flatMap(_ => ScalazState.put(i)).flatMap(_ => ScalazState.get))
+
+    loop(0, ScalazState.state(0)).runRec(0)._1
+  }
+
   def effectfulTraversalIdiomatic(bound: Int): Int =
     Interpreter.runIdiomatic(0) {
       FreeState.traverse((0 to bound).toList) { el =>
@@ -91,11 +108,19 @@ class Benchmarks {
     }.run(0)._1
 
   def effectfulTraversalCats(bound: Int): Int = {
-    import cats.implicits._
+    import cats.instances.list._, cats.syntax.traverse._
 
     (0 to bound).toList.traverse { el =>
       CatsState.get[Int].flatMap(s => CatsState.set(s + el))
     }.run(0).value._1
+  }
+
+  def effectfulTraversalScalaz(bound: Int): Int = {
+    import scalaz.std.list._, scalaz.syntax.traverse._
+
+    (0 to bound).toList.traverse { el =>
+      ScalazState.get[Int].flatMap(s => ScalazState.put(s + el))
+    }.runRec(0)._1
   }
 
   @Benchmark
@@ -205,4 +230,31 @@ class Benchmarks {
   def leftAssociatedBindCats100k(): Int = leftAssociatedBindCats(100000)
   @Benchmark
   def leftAssociatedBindCats1mil(): Int = leftAssociatedBindCats(1000000)
+
+  @Benchmark
+  def effectfulTraversalScalaz1k(): Int = effectfulTraversalScalaz(1000)
+  @Benchmark
+  def effectfulTraversalScalaz10k(): Int = effectfulTraversalScalaz(10000)
+  @Benchmark
+  def effectfulTraversalScalaz100k(): Int = effectfulTraversalScalaz(100000)
+  @Benchmark
+  def effectfulTraversalScalaz1mil(): Int = effectfulTraversalScalaz(1000000)
+
+  @Benchmark
+  def getSetScalaz1k(): Int = getSetScalaz(1000)
+  @Benchmark
+  def getSetScalaz10k(): Int = getSetScalaz(10000)
+  @Benchmark
+  def getSetScalaz100k(): Int = getSetScalaz(100000)
+  @Benchmark
+  def getSetScalaz1mil(): Int = getSetScalaz(1000000)
+  
+  @Benchmark
+  def leftAssociatedBindScalaz1k(): Int = leftAssociatedBindScalaz(1000)
+  @Benchmark
+  def leftAssociatedBindScalaz10k(): Int = leftAssociatedBindScalaz(10000)
+  @Benchmark
+  def leftAssociatedBindScalaz100k(): Int = leftAssociatedBindScalaz(100000)
+  @Benchmark
+  def leftAssociatedBindScalaz1mil(): Int = leftAssociatedBindScalaz(1000000)
 }
