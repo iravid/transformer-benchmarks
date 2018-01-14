@@ -146,6 +146,54 @@ class Benchmarks {
     }.runRec(0)._1
   }
 
+  def wrapFunOptimized(bound: Int): Int = {
+    def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
+      if (i > bound) acc
+      else loop(i + 1, acc.flatMap(_ => FreeState(i => (i+1, i+1))))
+
+    Interpreter.runOptimized(0)(loop(0, FreeState.pure(0)))._1
+  }
+
+  def wrapFunIdiomatic(bound: Int): Int = {
+    def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
+      if (i > bound) acc
+      else loop(i + 1, acc.flatMap(_ => FreeState(i => (i+1, i+1))))
+
+    Interpreter.runIdiomatic(0)(loop(0, FreeState.pure(0)))._1
+  }
+
+  def wrapFunIdiomaticRec(bound: Int): Int = {
+    def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
+      if (i > bound) acc
+      else loop(i + 1, acc.flatMap(_ => FreeState(i => (i+1, i+1))))
+
+    Interpreter.runIdiomaticRec(0)(loop(0, FreeState.pure(0)))._1
+  }
+
+  def wrapFunPlain(bound: Int): Int = {
+    def loop(i: Int, acc: State[Int, Int]): State[Int, Int] =
+      if (i > bound) acc
+      else loop(i + 1, acc.flatMap(_ => State(i => (i+1, i+1))))
+
+    loop(0, State.pure(0)).run(0)._1
+  }
+
+  def wrapFunCats(bound: Int): Int = {
+    def loop(i: Int, acc: CatsState[Int, Int]): CatsState[Int, Int] =
+      if (i > bound) acc
+      else loop(i + 1, acc.flatMap(_ => CatsState(i => (i+1, i+1))))
+
+    loop(0, CatsState.pure(0)).run(0).value._1
+  }
+
+  def wrapFunScalaz(bound: Int): Int = {
+    def loop(i: Int, acc: ScalazState[Int, Int]): ScalazState[Int, Int] =
+      if (i > bound) acc
+      else loop(i + 1, acc.flatMap(_ => ScalazState(i => (i+1, i+1))))
+
+    loop(0, ScalazState.state(0)).runRec(0)._1
+  }
+
   @Benchmark
   def effectfulTraversalIdiomatic1k(): Int = effectfulTraversalIdiomatic(1000)
   @Benchmark
@@ -172,6 +220,15 @@ class Benchmarks {
   def leftAssociatedBindIdiomatic100k(): Int = leftAssociatedBindIdiomatic(100000)
   @Benchmark
   def leftAssociatedBindIdiomatic1mil(): Int = leftAssociatedBindIdiomatic(1000000)
+
+  @Benchmark
+  def wrapFunIdiomatic1k(): Int = wrapFunIdiomatic(1000)
+  @Benchmark
+  def wrapFunIdiomatic10k(): Int = wrapFunIdiomatic(10000)
+  @Benchmark
+  def wrapFunIdiomatic100k(): Int = wrapFunIdiomatic(100000)
+  @Benchmark
+  def wrapFunIdiomatic1mil(): Int = wrapFunIdiomatic(1000000)
 
   @Benchmark
   def effectfulTraversalIdiomaticRec1k(): Int = effectfulTraversalIdiomaticRec(1000)
@@ -201,6 +258,15 @@ class Benchmarks {
   def leftAssociatedBindIdiomaticRec1mil(): Int = leftAssociatedBindIdiomaticRec(1000000)
 
   @Benchmark
+  def wrapFunIdiomaticRec1k(): Int = wrapFunIdiomaticRec(1000)
+  @Benchmark
+  def wrapFunIdiomaticRec10k(): Int = wrapFunIdiomaticRec(10000)
+  @Benchmark
+  def wrapFunIdiomaticRec100k(): Int = wrapFunIdiomaticRec(100000)
+  @Benchmark
+  def wrapFunIdiomaticRec1mil(): Int = wrapFunIdiomaticRec(1000000)
+
+  @Benchmark
   def effectfulTraversalOptimized1k(): Int = effectfulTraversalOptimized(1000)
   @Benchmark
   def effectfulTraversalOptimized10k(): Int = effectfulTraversalOptimized(10000)
@@ -228,6 +294,15 @@ class Benchmarks {
   def leftAssociatedBindOptimized1mil(): Int = leftAssociatedBindOptimized(1000000)
 
   @Benchmark
+  def wrapFunOptimized1k():  Int = wrapFunOptimized(1000)
+  @Benchmark
+  def wrapFunOptimized10k():  Int = wrapFunOptimized(10000)
+  @Benchmark
+  def wrapFunOptimized100k(): Int = wrapFunOptimized(100000)
+  @Benchmark
+  def wrapFunOptimized1mil(): Int = wrapFunOptimized(1000000)
+
+  @Benchmark
   def effectfulTraversalPlain1k(): Int = effectfulTraversalPlain(1000)
   @Benchmark
   def effectfulTraversalPlain10k(): Int = effectfulTraversalPlain(10000)
@@ -253,6 +328,15 @@ class Benchmarks {
   def leftAssociatedBindPlain100k(): Int = leftAssociatedBindPlain(100000)
   @Benchmark
   def leftAssociatedBindPlain1mil(): Int = leftAssociatedBindPlain(1000000)
+
+  @Benchmark
+  def wrapFunPlain1k(): Int = wrapFunPlain(1000)
+  @Benchmark
+  def wrapFunPlain10k(): Int = wrapFunPlain(10000)
+  @Benchmark
+  def wrapFunPlain100k(): Int = wrapFunPlain(100000)
+  @Benchmark
+  def wrapFunPlain1mil(): Int = wrapFunPlain(1000000)
 
   @Benchmark
   def effectfulTraversalCats1k(): Int = effectfulTraversalCats(1000)
@@ -307,4 +391,13 @@ class Benchmarks {
   def leftAssociatedBindScalaz100k(): Int = leftAssociatedBindScalaz(100000)
   @Benchmark
   def leftAssociatedBindScalaz1mil(): Int = leftAssociatedBindScalaz(1000000)
+
+  @Benchmark
+  def wrapFunScalaz1k(): Int = wrapFunScalaz(1000)
+  @Benchmark
+  def wrapFunScalaz10k(): Int = wrapFunScalaz(10000)
+  @Benchmark
+  def wrapFunScalaz100k(): Int = wrapFunScalaz(100000)
+  @Benchmark
+  def wrapFunScalaz1mil(): Int = wrapFunScalaz(1000000)
 }

@@ -13,6 +13,12 @@ sealed abstract class FreeState[S, A] { self =>
 }
 
 object FreeState {
+  final def apply[S, A](f: S => (S, A)): FreeState[S, A] =
+    get[S].flatMap(s => {
+      val (s1, a) = f(s)
+      set(s1).flatMap(_ => pure(a))
+    })
+
   final def pure[S, A](a: A): FreeState[S, A] = Pure(a)
 
   final def get[S]: FreeState[S, S] = FreeState.Get()
