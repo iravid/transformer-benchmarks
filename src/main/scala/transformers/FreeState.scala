@@ -1,5 +1,8 @@
 package transformers
 
+import scalaz.Leibniz
+import scalaz.Leibniz.===
+
 sealed abstract class FreeState[S, A] { self =>
   def tag: Int
 
@@ -10,6 +13,12 @@ sealed abstract class FreeState[S, A] { self =>
 }
 
 object FreeState {
+  final def apply[S, A](f: S => (S, A)): FreeState[S, A] =
+    get[S].flatMap(s => {
+      val (s1, a) = f(s)
+      set(s1).flatMap(_ => pure(a))
+    })
+
   final def pure[S, A](a: A): FreeState[S, A] = Pure(a)
 
   final def get[S]: FreeState[S, S] = FreeState.Get()
@@ -42,12 +51,20 @@ object FreeState {
     override final def tag = Tags.FlatMap
   }
 
-  final case class Get[S]() extends FreeState[S, S] {
+  final case class Get[S, A](ev: S === A) extends FreeState[S, A] {
     override final def tag = Tags.Get
   }
 
-  final case class Set[S](s: S) extends FreeState[S, Unit] {
+  object Get {
+    def apply[S](): FreeState[S, S] = Get[S, S](Leibniz.refl)
+  }
+
+  final case class Set[S, A](s: S, ev: Unit === A) extends FreeState[S, A] {
     override final def tag = Tags.Set
+  }
+
+  object Set {
+    def apply[S](s: S): FreeState[S, Unit] = Set[S, Unit](s, Leibniz.refl)
   }
 }
 
@@ -83,7 +100,7 @@ object Interpreter {
             currOp = conts.pollFirst()(res)
 
         case FreeState.Tags.Set =>
-          val op = currOp.asInstanceOf[FreeState.Set[S]]
+          val op = currOp.asInstanceOf[FreeState.Set[S, Unit]]
 
           state = op.s
           res = unit
@@ -108,7 +125,7 @@ object Interpreter {
               currOp = op.f(state)
 
             case FreeState.Tags.Set =>
-              val nested = op.fa.asInstanceOf[FreeState.Set[S]]
+              val nested = op.fa.asInstanceOf[FreeState.Set[S, Unit]]
 
               state = nested.s
               res = unit
@@ -124,38 +141,37 @@ object Interpreter {
     (state, res.asInstanceOf[A])
   }
 
-  // GADT shenanigans. This should be at some point the stack safe version.
-  // def runIdiomatic[S, A](s0: S)(fa0: FreeState[S, A]): (S, A) = {
-  //   @annotation.tailrec
-  //   def go(s: S, fa: FreeState[S, A]): (S, A) =
-  //     fa match {
-  //       case FreeState.Pure(a) =>
-  //         (s, a)
+  def runIdiomaticRec[S, A](s0: S)(fa0: FreeState[S, A]): (S, A) = {
+    @annotation.tailrec
+    def go(s: S, fa: FreeState[S, A]): (S, A) =
+      fa match {
+        case FreeState.Pure(a) =>
+          (s, a)
 
-  //       case FreeState.FlatMap(fa, f) =>
-  //         fa match {
-  //           case FreeState.Pure(a) =>
-  //             go(s, f(a))
+        case FreeState.FlatMap(fa, f) =>
+          fa match {
+            case FreeState.Pure(a) =>
+              go(s, f(a))
 
-  //           case FreeState.Get() =>
-  //             go(s, f(s))
+            case FreeState.Get(ev) =>
+              go(s, f(s))
 
-  //           case x: FreeState.Set[S] =>
-  //             go(x.s, f(()))
+            case FreeState.Set(s, ev) =>
+              go(s, f(()))
 
-  //           case FreeState.FlatMap(faInner, ff) =>
-  //             go(s, faInner.flatMap(x => ff(x).flatMap(f)))
-  //         }
+            case FreeState.FlatMap(faInner, ff) =>
+              go(s, faInner.flatMap(x => ff(x).flatMap(f)))
+          }
 
-  //       case FreeState.Get() =>
-  //         (s, s.asInstanceOf[A])
+        case FreeState.Get(ev) =>
+          (s, ev(s))
 
-  //       case FreeState.Set(s) =>
-  //         (s, ().asInstanceOf[A])
-  //     }
+        case FreeState.Set(s, ev) =>
+          (s, ev(()))
+      }
 
-  //   go(s0, fa0)
-  // }
+    go(s0, fa0)
+  }
 
   def runIdiomatic[S, A](s: S)(fa: FreeState[S, A]): (S, A) =
     fa match {
@@ -167,10 +183,10 @@ object Interpreter {
 
         runIdiomatic(s2)(flatmap.f(x))
 
-      case FreeState.Get() =>
-        (s, s.asInstanceOf[A])
+      case FreeState.Get(ev) =>
+        (s, ev(s))
 
-      case FreeState.Set(s) =>
-        (s, ().asInstanceOf[A])
+      case FreeState.Set(s, ev) =>
+        (s, ev(()))
     }
 }
