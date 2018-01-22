@@ -9,19 +9,19 @@ import scalaz.{ State => ScalazState }
 @OutputTimeUnit(TimeUnit.SECONDS)
 class Benchmarks {
   def leftAssociatedBindOptimized(bound: Int): Int = {
-    def loop(i: Int): FreeState[Int, Int] =
-      if (i > bound) FreeState.pure(i)
-      else FreeState.pure(i + 1).flatMap(loop)
+    def loop(i: Int): RWS[Int, Int, Int, Int] =
+      if (i > bound) RWS.pure(i)
+      else RWS.pure(i + 1).flatMap(loop)
 
-    Interpreter.runOptimized(0)(FreeState.pure(0).flatMap(loop))._1
+    Interpreter.runOptimized(0, 0, 0)(RWS.pure(0).flatMap(loop))(_ + _)._1
   }
 
   def leftAssociatedBindIdiomatic(bound: Int): Int = {
-    def loop(i: Int): FreeState[Int, Int] =
-      if (i > bound) FreeState.pure(i)
-      else FreeState.pure(i + 1).flatMap(loop)
+    def loop(i: Int): RWS[Int, Int, Int, Int] =
+      if (i > bound) RWS.pure(i)
+      else RWS.pure(i + 1).flatMap(loop)
 
-    Interpreter.runIdiomatic(0)(FreeState.pure(0).flatMap(loop))._1
+    Interpreter.runIdiomatic(0, 0, 0)(RWS.pure(0).flatMap(loop))(_ + _)._1
   }
 
   def leftAssociatedBindPlain(bound: Int): Int = {
@@ -49,19 +49,19 @@ class Benchmarks {
   }
 
   def getSetOptimized(bound: Int): Int = {
-    def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
-      if (i > bound) acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get)
-      else loop(i + 1, acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get))
+    def loop(i: Int, acc: RWS[Int, Int, Int, Int]): RWS[Int, Int, Int, Int] =
+      if (i > bound) acc.flatMap(_ => RWS.set(i)).flatMap(_ => RWS.get)
+      else loop(i + 1, acc.flatMap(_ => RWS.set(i)).flatMap(_ => RWS.get))
 
-    Interpreter.runOptimized(0)(loop(0, FreeState.pure(0)))._1
+    Interpreter.runOptimized(0, 0, 0)(loop(0, RWS.pure(0)))(_ + _)._1
   }
 
   def getSetIdiomatic(bound: Int): Int = {
-    def loop(i: Int, acc: FreeState[Int, Int]): FreeState[Int, Int] =
-      if (i > bound) acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get)
-      else loop(i + 1, acc.flatMap(_ => FreeState.set(i)).flatMap(_ => FreeState.get))
+    def loop(i: Int, acc: RWS[Int, Int, Int, Int]): RWS[Int, Int, Int, Int] =
+      if (i > bound) acc.flatMap(_ => RWS.set(i)).flatMap(_ => RWS.get)
+      else loop(i + 1, acc.flatMap(_ => RWS.set(i)).flatMap(_ => RWS.get))
 
-    Interpreter.runIdiomatic(0)(loop(0, FreeState.pure(0)))._1
+    Interpreter.runIdiomatic(0, 0, 0)(loop(0, RWS.pure(0)))(_ + _)._1
   }
 
   def getSetPlain(bound: Int): Int = {
@@ -89,18 +89,18 @@ class Benchmarks {
   }
 
   def effectfulTraversalIdiomatic(bound: Int): Int =
-    Interpreter.runIdiomatic(0) {
-      FreeState.traverse((0 to bound).toList) { el =>
-        FreeState.get[Int].flatMap(s => FreeState.set(s + el))
+    Interpreter.runIdiomatic(0, 0, 0) {
+      RWS.traverse((0 to bound).toList) { el =>
+        RWS.get[Int, Int, Int].flatMap(s => RWS.set(s + el))
       }
-    }._1
+    }(_ + _)._1
 
   def effectfulTraversalOptimized(bound: Int): Int =
-    Interpreter.runOptimized(0) {
-      FreeState.traverse((0 to bound).toList) { el =>
-        FreeState.get[Int].flatMap(s => FreeState.set(s + el))
+    Interpreter.runOptimized(0, 0, 0) {
+      RWS.traverse((0 to bound).toList) { el =>
+        RWS.get[Int, Int, Int].flatMap(s => RWS.set(s + el))
       }
-    }._1
+    }(_ + _)._1
 
   def effectfulTraversalPlain(bound: Int): Int =
     State.traverse((0 to bound).toList) { el =>
